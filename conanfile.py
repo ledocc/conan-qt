@@ -58,6 +58,7 @@ class QtConan(ConanFile):
         "commercial": [True, False],
         "opengl": ["no", "es2", "desktop", "dynamic"],
         "openssl": [True, False],
+        "openssl-linked": [True, False],
         "GUI": [True, False],
         "widgets": [True, False],
         "config": "ANY",
@@ -69,6 +70,7 @@ class QtConan(ConanFile):
         "commercial": False,
         "opengl": "desktop",
         "openssl": False,
+        "openssl-linked": False,
         "GUI": True,
         "widgets": True,
         "config": None,
@@ -282,10 +284,13 @@ class QtConan(ConanFile):
         if not self.options.openssl:
             args += ["-no-openssl"]
         else:
-            if self.options["OpenSSL"].shared:
+            if not self.options["OpenSSL"].shared:
                 args += ["-openssl-linked"]
             else:
-                args += ["-openssl"]
+                if self.options.openssl-linked:
+                    args += ["-openssl-linked"]
+                else:
+                    args += ["-openssl"]
             args += ["-I %s" % i for i in self.deps_cpp_info["OpenSSL"].include_paths]
             libs = self.deps_cpp_info["OpenSSL"].libs
             lib_paths = self.deps_cpp_info["OpenSSL"].lib_paths
