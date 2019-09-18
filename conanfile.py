@@ -77,6 +77,7 @@ class QtConan(ConanFile):
         "with_pq": [True, False],
         "with_odbc": [True, False],
         "with_sdl2": [True, False],
+        "with_pulseaudio": [True, False],
         "with_libalsa": [True, False],
         "with_openal": [True, False],
 
@@ -112,6 +113,7 @@ class QtConan(ConanFile):
         "with_pq": True,
         "with_odbc": True,
         "with_sdl2": True,
+        "with_pulseaudio": False,
         "with_libalsa": False,
         "with_openal": True,
 
@@ -160,6 +162,7 @@ class QtConan(ConanFile):
         if self.settings.os != "Linux":
             self.options.with_icu = False
             del self.options.with_fontconfig
+            del self.options.with_pulseaudio
 
     def configure(self):
         if self.settings.os != 'Linux':
@@ -189,10 +192,12 @@ class QtConan(ConanFile):
             self.options.with_sdl2 = False
 
         if not self.options.qtmultimedia:
+            self.options.with_pulseaudio = False
             self.options.with_libalsa = False
             self.options.with_openal = False
 
         if self.settings.os != "Linux":
+            self.options.with_pulseaudio = False
             self.options.with_libalsa = False
 
         if self.settings.os == "Android" and self.options.opengl == "desktop":
@@ -278,15 +283,21 @@ class QtConan(ConanFile):
                         pack_names.append("libgl1-mesa-dev")
                     elif self.options.opengl == "es2":
                         pack_names.append("libgles2-mesa-dev")
+                    if self.options.with_pulseaudio:
+                        pack_names.append(("libpulse-dev"))
                 else:
                     if not tools.os_info.linux_distro.startswith(("opensuse", "sles")):
                         pack_names = ["libxcb"]
                         if self.options.with_fontconfig:
                             pack_names.append("fontconfig")
+                        if self.options.with_pulseaudio:
+                            pack_names.append(("libpulse"))
                     if not tools.os_info.with_pacman:
                         pack_names += ["libxcb-devel", "libX11-devel", "glibc-devel"]
                         if self.options.with_fontconfig:
                             pack_names.append("libfontconfig1-devel")
+                        if self.options.with_pulseaudio:
+                            pack_names.append(("libpulse-devel"))
                         if self.options.opengl == "desktop":
                             if tools.os_info.linux_distro.startswith(("opensuse", "sles")):
                                 pack_names.append("Mesa-libGL-devel")
@@ -447,6 +458,7 @@ class QtConan(ConanFile):
         args.append("--sql-odbc=" + ("yes" if self.options.with_odbc else "no"))
 
         if self.options.qtmultimedia:
+            args.append("--pulseaudio=" + ("yes" if self.options.with_pulseaudio else "no"))
             args.append("--alsa=" + ("yes" if self.options.with_libalsa else "no"))
 
 
