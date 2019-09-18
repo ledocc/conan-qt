@@ -66,6 +66,7 @@ class QtConan(ConanFile):
         "with_glib": [True, False],
         # "with_libiconv": [True, False],  # Qt tests failure "invalid conversion from const char** to char**"
         "with_doubleconversion": [True, False],
+        "with_fontconfig": [True, False],
         "with_freetype": [True, False],
         "with_icu": [True, False],
         "with_harfbuzz": [True, False],
@@ -100,6 +101,7 @@ class QtConan(ConanFile):
         "with_glib": True,
         # "with_libiconv": True,
         "with_doubleconversion": True,
+        "with_fontconfig": True,
         "with_freetype": True,
         "with_icu": True,
         "with_harfbuzz": True,
@@ -157,6 +159,7 @@ class QtConan(ConanFile):
     def config_options(self):
         if self.settings.os != "Linux":
             self.options.with_icu = False
+            del self.options.with_fontconfig
 
     def configure(self):
         if self.settings.os != 'Linux':
@@ -175,6 +178,8 @@ class QtConan(ConanFile):
             self.options.GUI = True
         if not self.options.GUI:
             self.options.opengl = "no"
+            if self.settings.os == "Linux":
+                self.options.with_fontconfig = False
             self.options.with_freetype = False
             self.options.with_harfbuzz = False
             self.options.with_libjpeg = False
@@ -267,6 +272,8 @@ class QtConan(ConanFile):
             if tools.os_info.is_linux:
                 if tools.os_info.with_apt:
                     pack_names = ["libxcb1-dev", "libx11-dev", "libc6-dev"]
+                    if self.options.with_fontconfig:
+                        pack_names.append("libfontconfig1-dev")
                     if self.options.opengl == "desktop":
                         pack_names.append("libgl1-mesa-dev")
                     elif self.options.opengl == "es2":
@@ -274,8 +281,12 @@ class QtConan(ConanFile):
                 else:
                     if not tools.os_info.linux_distro.startswith(("opensuse", "sles")):
                         pack_names = ["libxcb"]
+                        if self.options.with_fontconfig:
+                            pack_names.append("fontconfig")
                     if not tools.os_info.with_pacman:
                         pack_names += ["libxcb-devel", "libX11-devel", "glibc-devel"]
+                        if self.options.with_fontconfig:
+                            pack_names.append("libfontconfig1-devel")
                         if self.options.opengl == "desktop":
                             if tools.os_info.linux_distro.startswith(("opensuse", "sles")):
                                 pack_names.append("Mesa-libGL-devel")
@@ -438,6 +449,9 @@ class QtConan(ConanFile):
         if self.options.qtmultimedia:
             args.append("--alsa=" + ("yes" if self.options.with_libalsa else "no"))
 
+
+        if self.settings.os == "Linux":
+            args.append("--fontconfig=" + ("yes" if self.options.with_fontconfig else "no"))
         for opt, conf_arg in [
                               ("with_doubleconversion", "doubleconversion"),
                               ("with_freetype", "freetype"),
