@@ -87,6 +87,7 @@ class QtConan(ConanFile):
         "sysroot": "ANY",
         "config": "ANY",
         "multiconfiguration": [True, False],
+        "ccache": [True, False],
     }, **{module: [True, False] for module in _submodules if module != 'qtbase'}
     )
     no_copy_source = True
@@ -120,6 +121,7 @@ class QtConan(ConanFile):
         "sysroot": None,
         "config": None,
         "multiconfiguration": False,
+        "ccache": False,
     }, **{module: False for module in _submodules if module != 'qtbase'}
     )
     requires = "zlib/1.2.11@conan/stable"
@@ -199,6 +201,10 @@ class QtConan(ConanFile):
 
         if self.options.multiconfiguration:
             del self.settings.build_type
+
+        ccache_compatible_compiler = ["gcc", "clang", "apple-clang"]
+        if not self.settings.compiler in ccache_compatible_compiler:
+            raise ConanInvalidConfiguration("ccache is supported only with {}.".format(", ".join( ccache_compatible_compiler )))
 
         assert QtConan.version == QtConan._submodules['qtbase']['branch']
 
@@ -368,6 +374,8 @@ class QtConan(ConanFile):
             args.append("-commercial")
         else:
             args.append("-opensource")
+        if self.options.ccache:
+            args.append("-ccache")
         if not self.options.GUI:
             args.append("-no-gui")
         if not self.options.widgets:
@@ -592,6 +600,7 @@ class QtConan(ConanFile):
         # for people who don't use the `device` option
         self.info.options.cross_compile = None
         del self.info.options.sysroot
+        del self.info.options.ccache
 
     def package_info(self):
         self.env_info.CMAKE_PREFIX_PATH.append(self.package_folder)
