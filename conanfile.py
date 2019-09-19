@@ -80,6 +80,8 @@ class QtConan(ConanFile):
         "with_pulseaudio": [True, False],
         "with_libalsa": [True, False],
         "with_openal": [True, False],
+        "with_gstreamer": [True, False],
+        "gstreamer_version": ["1.0", "0.10"],
 
         "GUI": [True, False],
         "widgets": [True, False],
@@ -116,6 +118,8 @@ class QtConan(ConanFile):
         "with_pulseaudio": False,
         "with_libalsa": False,
         "with_openal": True,
+        "with_gstreamer": False,
+        "gstreamer_version": "1.0",
 
         "GUI": True,
         "widgets": True,
@@ -195,6 +199,7 @@ class QtConan(ConanFile):
             self.options.with_pulseaudio = False
             self.options.with_libalsa = False
             self.options.with_openal = False
+            self.options.with_gstreamer= False
 
         if self.settings.os != "Linux":
             self.options.with_pulseaudio = False
@@ -460,6 +465,10 @@ class QtConan(ConanFile):
         if self.options.qtmultimedia:
             args.append("--pulseaudio=" + ("yes" if self.options.with_pulseaudio else "no"))
             args.append("--alsa=" + ("yes" if self.options.with_libalsa else "no"))
+            if not self.options.with_gstreamer:
+                args.append("--no-gstreamer")
+            else:
+                args.append("--gstreamer=" + self.options.gstreamer_version)
 
 
         if self.settings.os == "Linux":
