@@ -171,6 +171,7 @@ class QtConan(ConanFile):
             self.options.with_icu = False
             del self.options.with_fontconfig
             del self.options.with_pulseaudio
+            del self.options.with_libalsa
 
         if self.settings.os != "Windows":
             del self.options.mediaplayer_backend
@@ -208,10 +209,6 @@ class QtConan(ConanFile):
             self.options.with_libalsa = False
             self.options.with_openal = False
             self.options.with_gstreamer= False
-
-        if self.settings.os != "Linux":
-            self.options.with_pulseaudio = False
-            self.options.with_libalsa = False
 
         if self.settings.os == "Android" and self.options.opengl == "desktop":
             raise ConanInvalidConfiguration("OpenGL desktop is not supported on Android. Consider using OpenGL es2")
@@ -278,7 +275,7 @@ class QtConan(ConanFile):
             self.requires("sdl2/2.0.9@bincrafters/stable")
         if self.options.with_openal:
             self.requires("openal/1.19.0@bincrafters/stable")
-        if self.options.with_libalsa:
+        if (self.settings.os == 'Linux') and self.options.with_libalsa:
             self.requires("libalsa/1.1.9@conan/stable")
         if self.options.GUI:
             if self.settings.os == "Linux":
@@ -471,16 +468,17 @@ class QtConan(ConanFile):
         args.append("--sql-odbc=" + ("yes" if self.options.with_odbc else "no"))
 
         if self.options.qtmultimedia:
-            args.append("--pulseaudio=" + ("yes" if self.options.with_pulseaudio else "no"))
-            args.append("--alsa=" + ("yes" if self.options.with_libalsa else "no"))
+            if self.settings.os == 'Linux':
+                args.append("--pulseaudio=" + ("yes" if self.options.with_pulseaudio else "no"))
+                args.append("--alsa=" + ("yes" if self.options.with_libalsa else "no"))
             if not self.options.with_gstreamer:
                 args.append("--no-gstreamer")
             else:
                 args.append("--gstreamer=" + self.options.gstreamer_version)
 
-        if self.settings.os == "Windows":
-            args.append("--mediaplayer-backend=" + str(self.options.mediaplayer_backend))
-            args.append("--evr=" + ("yes" if self.options.with_evr else "no"))
+            if self.settings.os == "Windows":
+                args.append("--mediaplayer-backend=" + str(self.options.mediaplayer_backend))
+                args.append("--evr=" + ("yes" if self.options.with_evr else "no"))
 
         if self.settings.os == "Linux":
             args.append("--fontconfig=" + ("yes" if self.options.with_fontconfig else "no"))
