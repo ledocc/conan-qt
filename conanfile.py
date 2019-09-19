@@ -82,6 +82,8 @@ class QtConan(ConanFile):
         "with_openal": [True, False],
         "with_gstreamer": [True, False],
         "gstreamer_version": ["1.0", "0.10"],
+        "mediaplayer_backend": ["directshow", "wmf"],
+        "with_evr": [True, False],
 
         "GUI": [True, False],
         "widgets": [True, False],
@@ -120,6 +122,8 @@ class QtConan(ConanFile):
         "with_openal": True,
         "with_gstreamer": False,
         "gstreamer_version": "1.0",
+        "mediaplayer_backend": "directshow",
+        "with_evr": True,
 
         "GUI": True,
         "widgets": True,
@@ -167,6 +171,10 @@ class QtConan(ConanFile):
             self.options.with_icu = False
             del self.options.with_fontconfig
             del self.options.with_pulseaudio
+
+        if self.settings.os != "Windows":
+            del self.options.mediaplayer_backend
+            del self.options.with_evr
 
     def configure(self):
         if self.settings.os != 'Linux':
@@ -470,6 +478,9 @@ class QtConan(ConanFile):
             else:
                 args.append("--gstreamer=" + self.options.gstreamer_version)
 
+        if self.settings.os == "Windows":
+            args.append("--mediaplayer-backend=" + str(self.options.mediaplayer_backend))
+            args.append("--evr=" + ("yes" if self.options.with_evr else "no"))
 
         if self.settings.os == "Linux":
             args.append("--fontconfig=" + ("yes" if self.options.with_fontconfig else "no"))
