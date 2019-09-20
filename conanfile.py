@@ -22,25 +22,28 @@ class qt(Generator):
         return "[Paths]\nPrefix = %s\n" % self.conanfile.deps_cpp_info["qt"].rootpath.replace("\\", "/")
 
 
-class QtConan(ConanFile):
 
-    def _getsubmodules():
-        config = configparser.ConfigParser()
-        config.read('qtmodules.conf')
-        res = {}
-        assert config.sections()
-        for s in config.sections():
-            section = str(s)
-            assert section.startswith("submodule ")
-            assert section.count('"') == 2
-            modulename = section[section.find('"') + 1: section.rfind('"')]
-            status = str(config.get(section, "status"))
-            if status != "obsolete" and status != "ignore":
-                res[modulename] = {"branch": str(config.get(section, "branch")), "status": status,
-                                   "path": str(config.get(section, "path")), "depends": []}
-                if config.has_option(section, "depends"):
-                    res[modulename]["depends"] = [str(i) for i in config.get(section, "depends").split()]
-        return res
+def _getsubmodules():
+    config = configparser.ConfigParser()
+    config.read('qtmodules.conf')
+    res = {}
+    assert config.sections()
+    for s in config.sections():
+        section = str(s)
+        assert section.startswith("submodule ")
+        assert section.count('"') == 2
+        modulename = section[section.find('"') + 1: section.rfind('"')]
+        status = str(config.get(section, "status"))
+        if status != "obsolete" and status != "ignore":
+            res[modulename] = {"branch": str(config.get(section, "branch")), "status": status,
+                               "path": str(config.get(section, "path")), "depends": []}
+            if config.has_option(section, "depends"):
+                res[modulename]["depends"] = [str(i) for i in config.get(section, "depends").split()]
+    return res
+
+
+
+class QtConan(ConanFile):
 
     _submodules = _getsubmodules()
 
@@ -431,7 +434,7 @@ class QtConan(ConanFile):
         elif self.settings.build_type == "MinSizeRel":
             args.append("-release")
             args.append("-optimize-size")
-            
+
         for module in QtConan._submodules:
             if module != 'qtbase' and not getattr(self.options, module) \
                     and os.path.isdir(os.path.join(self.source_folder, 'qt5', QtConan._submodules[module]['path'])):
@@ -530,7 +533,7 @@ class QtConan(ConanFile):
                     for element in itertools.filterfalse(seen.__contains__, l):
                         seen_add(element)
                         yield element
-                
+
                 def _gather_libs(p):
                     libs = ["-l" + i for i in self.deps_cpp_info[p].libs]
                     libs += self.deps_cpp_info[p].sharedlinkflags
@@ -609,7 +612,7 @@ class QtConan(ConanFile):
         for package in ['xkbcommon', 'glib']:
             if package in self.deps_cpp_info.deps:
                 lib_path = self.deps_cpp_info[package].rootpath
-                for dirpath, dirnames, filenames in os.walk(lib_path):
+                for dirpath, _, filenames in os.walk(lib_path):
                     for filename in filenames:
                         if filename.endswith('.pc'):
                             shutil.copyfile(os.path.join(dirpath, filename), filename)
@@ -645,6 +648,7 @@ class QtConan(ConanFile):
         self.info.options.cross_compile = None
         del self.info.options.sysroot
         del self.info.options.ccache
+
 
     def package_info(self):
         self.env_info.CMAKE_PREFIX_PATH.append(self.package_folder)
