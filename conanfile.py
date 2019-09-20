@@ -59,26 +59,32 @@ class QtConan(ConanFile):
     exports = ["LICENSE.md", "qtmodules.conf", "*.diff"]
     settings = "os", "arch", "compiler", "build_type", "os_build", "arch_build"
 
-    options = dict({
+
+    _options_objects = [
+        BinaryOption( "comercial", False, "comercial", "opensource" ),
+        SystemQtOption( "with_pcre2", True, "pcre", requirements="pcre2/10.32@bincrafters/stable" ),
+        YesNoOption( "with_glib", True, "glib", requirements="glib/2.58.3@bincrafters/stable", os_availability="Linux" ),
+        YesNoOption( "with_doubleconversion", True, "doubleconversion", requirements="double-conversion/3.1.4@bincrafters/stable" ),
+        YesNoOption( "with_freetype", True, "freetype", requirements="freetype/2.10.0@bincrafters/stable", os_availability="Linux" ),
+        YesNoOption( "with_icu", True, "icu", requirements="icu/64.2@bincrafters/stable" ),
+        YesNoOption( "with_harfbuzz", True, "harfbuzz", requirements="harfbuzz/2.4.0@bincrafters/stable" ),
+        YesNoOption( "with_libjpeg", True, "libjpeg", requirements="libjpeg/9c@bincrafters/stable" ),
+        YesNoOption( "with_libpng", True, "libpng", requirements="libpng/1.6.37@bincrafters/stable" ),
+        SystemQtOption( "with_sqlite3", True, "sqlite", requirements="sqlite3/3.28.0@bincrafters/stable"),
+        YesNoOption( "with_mysql", True, "sql-mysql", requirements="sqlite3/3.28.0@bincrafters/stable"),
+        YesNoOption( "with_pq", True, "sql-psql", requirements="libpq/11.4@bincrafters/stable" ),
+        YesNoOption( "with_odbc", True, "sql-odbc", requirements="odbc/2.3.7@bincrafters/stable" )
+#        YesNoOption( "with_", True, "", requirements= )
+    ]
+
+    _options_simples = dict({
         "shared": [True, False],
-        "commercial": [True, False],
 
         "opengl": ["no", "es2", "desktop", "dynamic"],
         "openssl": [True, False],
-        "with_pcre2": [True, False],
-        "with_glib": [True, False],
         # "with_libiconv": [True, False],  # Qt tests failure "invalid conversion from const char** to char**"
-        "with_doubleconversion": [True, False],
         "with_fontconfig": [True, False],
-        "with_freetype": [True, False],
-        "with_icu": [True, False],
-        "with_harfbuzz": [True, False],
-        "with_libjpeg": [True, False],
-        "with_libpng": [True, False],
-        "with_sqlite3": [True, False],
-        "with_mysql": [True, False],
-        "with_pq": [True, False],
-        "with_odbc": [True, False],
+
         "with_sdl2": [True, False],
         "with_pulseaudio": [True, False],
         "with_libalsa": [True, False],
@@ -97,28 +103,17 @@ class QtConan(ConanFile):
         "config": "ANY",
         "multiconfiguration": [True, False],
         "ccache": [True, False],
-    }, **{module: [True, False] for module in _submodules if module != 'qtbase'}
-    )
+    }, **{module: [True, False] for module in _submodules if module != 'qtbase'})
+
+    options=make_options_dict( _options_simples, _options_objects )
+
     no_copy_source = True
-    default_options = dict({
+    _default_options_simples = dict({
         "shared": True,
-        "commercial": False,
         "opengl": "desktop",
         "openssl": True,
-        "with_pcre2": True,
-        "with_glib": True,
         # "with_libiconv": True,
-        "with_doubleconversion": True,
         "with_fontconfig": True,
-        "with_freetype": True,
-        "with_icu": True,
-        "with_harfbuzz": True,
-        "with_libjpeg": True,
-        "with_libpng": True,
-        "with_sqlite3": True,
-        "with_mysql": True,
-        "with_pq": True,
-        "with_odbc": True,
         "with_sdl2": True,
         "with_pulseaudio": False,
         "with_libalsa": False,
@@ -139,6 +134,8 @@ class QtConan(ConanFile):
         "ccache": False,
     }, **{module: False for module in _submodules if module != 'qtbase'}
     )
+    default_options=make_default_options_dict( _default_options_simples, _options_objects )
+
     requires = "zlib/1.2.11@conan/stable"
     short_paths = True
 
@@ -170,6 +167,10 @@ class QtConan(ConanFile):
                 self.build_requires('pkg-config_installer/0.29.2@bincrafters/stable')
 
     def config_options(self):
+        for o in self._options_objects:
+            o.config_options( self )
+
+
         if self.settings.os != "Linux":
             self.options.with_icu = False
             del self.options.with_fontconfig
@@ -181,9 +182,8 @@ class QtConan(ConanFile):
             del self.options.with_evr
 
     def configure(self):
-        if self.settings.os != 'Linux':
-            self.options.with_glib = False
-        #     self.options.with_libiconv = False
+#        if self.settings.os != 'Linux':
+#             self.options.with_libiconv = False
         if self.settings.os == "Windows":
             if self.settings.compiler == "gcc":
                 self.options.with_mysql = False
@@ -242,37 +242,18 @@ class QtConan(ConanFile):
                 _enablemodule(module)
 
     def requirements(self):
+        for o in self._options_objects:
+            o.requirements( self )
+
         if self.options.openssl:
             self.requires("OpenSSL/1.1.1c@conan/stable")
-        if self.options.with_pcre2:
-            self.requires("pcre2/10.32@bincrafters/stable")
-
-        if self.options.with_glib:
-            self.requires("glib/2.58.3@bincrafters/stable")
         # if self.options.with_libiconv:
         #     self.requires("libiconv/1.15@bincrafters/stable")
-        if self.options.with_doubleconversion and not self.options.multiconfiguration:
-            self.requires("double-conversion/3.1.4@bincrafters/stable")
-        if self.options.with_freetype and not self.options.multiconfiguration:
-            self.requires("freetype/2.10.0@bincrafters/stable")
-        if self.options.with_icu:
-            self.requires("icu/64.2@bincrafters/stable")
-        if self.options.with_harfbuzz and not self.options.multiconfiguration:
-            self.requires("harfbuzz/2.4.0@bincrafters/stable")
-        if self.options.with_libjpeg and not self.options.multiconfiguration:
-            self.requires("libjpeg/9c@bincrafters/stable")
-        if self.options.with_libpng and not self.options.multiconfiguration:
-            self.requires("libpng/1.6.37@bincrafters/stable")
         if self.options.with_sqlite3 and not self.options.multiconfiguration:
-            self.requires("sqlite3/3.28.0@bincrafters/stable")
             self.options["sqlite3"].enable_column_metadata = True
         if self.options.with_mysql:
-            self.requires("mysql-connector-c/6.1.11@bincrafters/stable")
             self.options["mysql-connector-c"].shared = True
-        if self.options.with_pq:
-            self.requires("libpq/11.4@bincrafters/stable")
         if self.options.with_odbc:
-            self.requires("odbc/2.3.7@bincrafters/stable")
             self.options["odbc"].shared = (self.settings.os == "Windows")
         if self.options.with_sdl2:
             self.requires("sdl2/2.0.9@bincrafters/stable")
@@ -405,10 +386,9 @@ class QtConan(ConanFile):
     def build(self):
         args = ["-confirm-license", "-silent", "-nomake examples", "-nomake tests",
                 "-prefix %s" % self.package_folder]
-        if self.options.commercial:
-            args.append("-commercial")
-        else:
-            args.append("-opensource")
+        for o in self._options_objects:
+            o.build( self, args )
+
         if self.options.ccache:
             args.append("-ccache")
         if not self.options.GUI:
@@ -462,13 +442,6 @@ class QtConan(ConanFile):
                 args += ["-openssl-linked"]
 
         # args.append("--iconv=" + ("gnu" if self.options.with_libiconv else "no"))
-
-        args.append("--glib=" + ("yes" if self.options.with_glib else "no"))
-        args.append("--pcre=" + ("system" if self.options.with_pcre2 else "qt"))
-        args.append("--icu=" + ("yes" if self.options.with_icu else "no"))
-        args.append("--sql-mysql=" + ("yes" if self.options.with_mysql else "no"))
-        args.append("--sql-psql=" + ("yes" if self.options.with_pq else "no"))
-        args.append("--sql-odbc=" + ("yes" if self.options.with_odbc else "no"))
 
         if self.options.qtmultimedia:
             if self.settings.os == 'Linux':
