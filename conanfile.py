@@ -80,6 +80,7 @@ class QtConan(ConanFile):
 
         "GUI": [True, False],
         "widgets": [True, False],
+        "framework":  [True, False],
 
         "device": "ANY",
         "cross_compile": "ANY",
@@ -116,6 +117,7 @@ class QtConan(ConanFile):
 
         "GUI": True,
         "widgets": True,
+        "framework": True,
 
         "device": None,
         "cross_compile": None,
@@ -194,6 +196,8 @@ class QtConan(ConanFile):
         if self.settings.compiler == "apple-clang":
             if tools.Version(self.settings.compiler.version) < "10.0":
                 raise ConanInvalidConfiguration("Old versions of apple sdk are not supported by Qt (QTBUG-76777)")
+        if self.settings.os != "Macos":
+            del self.options.framework
 
     def configure(self):
         if self.settings.compiler in ["gcc", "clang"]:
@@ -210,6 +214,9 @@ class QtConan(ConanFile):
             self.options.with_mysql = False
             if not self.options.shared and self.options.with_icu:
                 raise ConanInvalidConfiguration("icu option is not supported on windows in static build. see QTBUG-77120.")
+        if self.settings.os == "Macos":
+            if (self.settings.build_type == "Debug") or (not self.options.shared):
+                self.options.framework = False
 
         if self.options.widgets and not self.options.GUI:
             raise ConanInvalidConfiguration("using option qt:widgets without option qt:GUI is not possible. "
@@ -577,8 +584,8 @@ class QtConan(ConanFile):
             args.append("-mysql_config " + os.path.join(self.deps_cpp_info['libmysqlclient'].rootpath, "bin", "mysql_config"))
         if 'libpq' in self.deps_cpp_info.deps:
             args.append("-psql_config " + os.path.join(self.deps_cpp_info['libpq'].rootpath, "bin", "pg_config"))
-        if self.settings.os == "Macos":
-            args += ["-no-framework"]
+        if self.settings.os == "Macos" and self.options.framework:
+            args += ["-framework"]
         elif self.settings.os == "Android":
             args += ["-android-ndk-platform android-%s" % self.settings.os.api_level]
             args += ["-android-abis %s" % {"armv7": "armeabi-v7a",
@@ -673,6 +680,8 @@ class QtConan(ConanFile):
 
     def package_info(self):
         self.env_info.CMAKE_PREFIX_PATH.append(self.package_folder)
+        if self.settings.os == "Macos" and self.options.framework:
+            self.cpp_info.frameworkdirs.append(os.path.join( self.package_folder, "lib"))
 
     @staticmethod
     def _remove_duplicate(l):
